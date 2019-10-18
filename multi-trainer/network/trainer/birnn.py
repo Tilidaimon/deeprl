@@ -46,11 +46,12 @@ class ActorNet(nn.Module):   # ae(s)=a
             nn.LogSoftmax()
             )
 
-    def init_hidden(self.batch_size):
+    def init_hidden(self, batch_size):
         return (torch.zeros(self.num_layers*self.bi_num, batch_size, self.hidden_dim).to(self.device),
             torch.zeros(self.num_layers*self.bi_num, batch_size, self.hidden_dim).to(self.device))
 
-    def forward(self,x):
+    def forward(self, x):
+        hidden = self.init_hidden(self.batch_size)
         y = self.lstm(x)
         out = self.out(y)
         return out
@@ -104,6 +105,7 @@ class DDPG(object):
         self.Actor_target = ActorNet(self.a_input_dim, self.a_output_dim)
         self.Critic_eval = CriticNet(self.c_input_dim, self.c_output_dim)
         self.Critic_target = CriticNet(self.c_input_dim, slef.c_output_dim)
+
         self.c_opt = torch.optim.Adam(self.Critic_eval.parameters(),lr=LR_C)
         self.a_opt = torch.optim.Adam(self.Actor_eval.parameters(),lr=LR_A)
         self.loss_td = nn.MSELoss()
@@ -119,7 +121,7 @@ class DDPG(object):
     def preupdate(self):
         self.replay_sample_index = None
 
-    def learn(self, t):
+    def learn(self, agents, t):
         """
         for x in self.Actor_target.state_dict().keys():
             eval('self.Actor_target.' + x + '.data.mul_((1-TAU))')
@@ -155,7 +157,8 @@ class DDPG(object):
         rew_n = torch.FloatTensor(rew_n)
         obs_next_n = torch.FloatTensor(obs_next_n)
 
-        action = self.Actor_eval(obs_n)
+        for i in len(agents):
+            action, hidden = self.Actor_eval(obs_n, hidden)
         q = self.Critic_eval(obs_n)  # loss=-q=-ce（s,ae（s））更新ae   ae（s）=a   ae（s_）=a_
         # 如果 a是一个正确的行为的话，那么它的Q应该更贴近0
         loss_a = -torch.mean(q) 
