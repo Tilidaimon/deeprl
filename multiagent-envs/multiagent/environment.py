@@ -122,12 +122,7 @@ class MultiAgentEnv(gym.Env):
         agent.action.u = np.zeros(self.world.dim_p)
         agent.action.c = np.zeros(self.world.dim_c)
         # process action
-        agent.target = Landmark()
-        agent.target.name = 'landmark %d' % action
-        for landmark in world.landmarks:
-            if landmark.name == agent.target.name:
-                agent.target.state.p_pos = landmark.state.p_pos
-                agent.target.state.p_angle = landmark.state.p_angle
+        agent.target = world.landmarks[action]
 
         if agent.movable:
             # physical action
@@ -135,10 +130,12 @@ class MultiAgentEnv(gym.Env):
             dist = np.sqrt(np.square(los))
             v = np.sqrt(np.square(agent.p_vel))
             
-            agent_angle = 1-np.dot(los, agent.p_vel)/(v*dist)
+            agent_angle = np.dot(los, agent.p_vel)/(v*dist)
             a = [cos(agent.target.state.p_angle),sin(agent.target.state.p_angle)]
-            target_angle = 1-np.dot(-los, a)/(dist)
-            agent.action.u = 
+            target_angle = np.dot(-los, a)/(dist)
+
+            agent.action.u = agent.state.p_vel/v + 0.6 * los/dist
+            action = action[1:]
         if not agent.silent:
             # communication action
             if self.discrete_action_input:

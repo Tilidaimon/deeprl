@@ -51,6 +51,8 @@ class Entity(object):
         # mass
         self.initial_mass = 1.0
 
+        self.dead = False
+
     @property
     def mass(self):
         return self.initial_mass
