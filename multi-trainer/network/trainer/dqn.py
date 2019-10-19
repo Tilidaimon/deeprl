@@ -82,13 +82,13 @@ class DQN(object):
         obs = Variable(torch.unsqueeze(torch.FloatTensor(obs), 0))
         if np.random.uniform() > epsilon:
             action_value = self.eval_net.forward(obs)
-            action = torch.max(action_value, 1)[1].data.numpy()[0, 0]
+            action = torch.max(action_value, 1)[1].data.numpy()[0]
         else: # random
             action = np.random.randint(0, self.action_space)
         return action
  
 
-    def experience(self, obs, act, rew, new_obs, done, terminal):
+    def store_transaction(self, obs, act, rew, new_obs, done):
         # Store transition in the replay buffer.
         self.replay_buffer.add(obs, act, rew, new_obs, float(done))
 
@@ -130,29 +130,5 @@ class DQN(object):
         self.optimizer.step()
  
  
-dqn = DQN()
-print('\nCollecting experience...')
-for i_episode in range(4000):
-    s = env.reset()
-    while True:
-        env.render()
- 
-        a = dqn.choose_action(s)
-        # take action
-        s_, r, done, info = env.step(a)
- 
-        # modify the reward
-        x, x_dot, theta, theta_dot = s_
-        r1 = (env.x_threshold - abs(x)) / env.x_threshold - 0.8
-        r2 = (env.theta_threshold_radians - abs(theta)) / env.theta_threshold_radians - 0.5
-        r = r1 + r2
- 
-        dqn.store_transaction(s, a, r, s_)
- 
-        if dqn.memory_counter > MEMORY_CAPACITY:
-            dqn.learn()
- 
-        if done:
-            break
-        s = s_
+
 
