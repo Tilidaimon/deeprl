@@ -4,9 +4,9 @@ import tensorflow as tf
 import time
 import pickle
 
-import maddpg.common.tf_util as U
-from maddpg.trainer.maddpg import MADDPGAgentTrainer
-import tensorflow.contrib.layers as layers
+#import maddpg.common.tf_util as U
+from network.trainer.dqn import DQN
+#import tensorflow.contrib.layers as layers
 
 def parse_args():
     parser = argparse.ArgumentParser("Reinforcement Learning experiments for multiagent environments")
