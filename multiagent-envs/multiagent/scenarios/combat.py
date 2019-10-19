@@ -76,6 +76,7 @@ class Scenario(BaseScenario):
             dists = [np.sqrt(np.sum(np.square(a.state.p_pos - l.state.p_pos))) for a in world.agents]
             rew -= min(dists)
             if self.is_collision(l, agent):
+                
                 rew += 10
         if agent.collide:
             for a in world.agents:
@@ -86,18 +87,22 @@ class Scenario(BaseScenario):
 
     def observation(self, agent, world):
         # get positions of all entities in this agent's reference frame
-        entity_pos = []
-        for entity in world.landmarks:  # world.entities:
-            entity_pos.append(entity.state.p_pos - agent.state.p_pos)
-        # entity colors
-        entity_color = []
-        for entity in world.landmarks:  # world.entities:
-            entity_color.append(entity.color)
+        target_pos = []
+        agent_angles = []
+        target_angles = []
+        for target in world.landmarks:  # world.entities:
+            los = target.state.p_pos - agent.state.p_pos
+            dist = np.sqrt(np.square(los))
+            v = np.sqrt(np.square(agent.p_vel))
+            target_pos.append(dist)
+
+            agent_angle = 1-np.dot(los, agent.p_vel)/(v*dist)
+            a = [cos(target.state.p_angle),sin(target.state.p_angle)]
+            target_angle = 1-np.dot(-los, a)/(dist)
+            target_pos.append(los)
+            agent_angles.append(agent_angle)
+            target_angles.append(target_angles)
         # communication of all other agents
         comm = []
         other_pos = []
-        for other in world.agents:
-            if other is agent: continue
-            comm.append(other.state.c)
-            other_pos.append(other.state.p_pos - agent.state.p_pos)
-        return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
+        return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + agent_angles + target_pos + target_angles)

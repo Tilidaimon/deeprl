@@ -15,6 +15,11 @@ class AgentState(EntityState):
         # communication utterance
         self.c = None
 
+class LandmarkState(EntityState):
+    def __init__(self):
+        super(LandmarkState, self).__init__()
+        self.p_angle = None
+
 # action of the agent
 class Action(object):
     def __init__(self):
@@ -55,6 +60,8 @@ class Landmark(Entity):
      def __init__(self):
         super(Landmark, self).__init__()
 
+        self.angle = None
+
 # properties of agent entities
 class Agent(Entity):
     def __init__(self):
@@ -77,6 +84,8 @@ class Agent(Entity):
         self.action = Action()
         # script behavior to execute
         self.action_callback = None
+        # target
+        self.target = None
 
 # multi-agent world
 class World(object):
