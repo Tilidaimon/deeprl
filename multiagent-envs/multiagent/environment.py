@@ -2,8 +2,8 @@ import gym
 from gym import spaces
 from gym.envs.registration import EnvSpec
 import numpy as np
-from multiagent.multi_discrete import MultiDiscrete
-from multiagent.core import Landmark
+#from multiagent.multi_discrete import MultiDiscrete
+#from multiagent.core import Landmark
 
 # environment for all agents in the multiagent world
 # currently code assumes that no agents will be created/destroyed at runtime!
