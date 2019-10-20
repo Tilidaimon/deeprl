@@ -1,6 +1,6 @@
 import numpy as np
-from multiagent.core import World, Agent, Landmark
-from multiagent.scenario import BaseScenario
+from multiagentenvs.core import World, Agent, Landmark
+from multiagentenvs.scenario import BaseScenario
 
 
 class Scenario(BaseScenario):
@@ -22,6 +22,7 @@ class Scenario(BaseScenario):
         world.landmarks = [Landmark() for i in range(num_landmarks)]
         for i, landmark in enumerate(world.landmarks):
             landmark.name = 'landmark %d' % i
+            landmark.state.p_angle = np.random.uniform(-2*np.pi, 2*np.pi)
             landmark.collide = False
             landmark.movable = False
         # make initial conditions
@@ -38,11 +39,12 @@ class Scenario(BaseScenario):
         # set random initial states
         for agent in world.agents:
             agent.state.p_pos = np.random.uniform(-1, +1, world.dim_p)
-            agent.state.p_vel = np.zeros(world.dim_p)
+            agent.state.p_vel = 0.1*np.ones(world.dim_p)
             agent.state.c = np.zeros(world.dim_c)
         for i, landmark in enumerate(world.landmarks):
             landmark.state.p_pos = np.random.uniform(-1, +1, world.dim_p)
             landmark.state.p_vel = np.zeros(world.dim_p)
+            landmark.state.p_angle = np.random.uniform(-2*np.pi, 2*np.pi)
 
     def benchmark_data(self, agent, world):
         rew = 0
@@ -73,15 +75,22 @@ class Scenario(BaseScenario):
         # Agents are rewarded based on minimum agent distance to each landmark, penalized for collisions
         rew = 0
         min_dist = 1e6
-        dist = np.sqrt(np.sum(np.square(agent.state.p_pos - agent.target.state.p_pos)))
-        rew -= dist
+        los = agent.target.state.p_pos - agent.state.p_pos
+        dist = np.sqrt(np.sum(np.square(los)))
+        v = np.sqrt(np.sum(np.square(agent.state.p_vel)))
+        
+        agent_angle = np.dot(los, agent.state.p_vel)/(v*dist)
+        a = [np.cos(agent.target.state.p_angle),np.sin(agent.target.state.p_angle)]
+        target_angle = np.dot(-los, a)/(dist)
+
+        rew -= (target_angle - agent_angle)/dist
 
         if self.is_collision(agent.target, agent):
-            if agent.target.dead = False:
+            if agent.target.dead == False:
                 rew += 10
                 agent.target.dead = True
         else:
-            if agent.target.dead = True:
+            if agent.target.dead == True:
                 rew += 5
 
         if agent.collide:
@@ -98,13 +107,16 @@ class Scenario(BaseScenario):
         target_angles = []
         for target in world.landmarks:  # world.entities:
             los = target.state.p_pos - agent.state.p_pos
-            dist = np.sqrt(np.square(los))
-            v = np.sqrt(np.square(agent.p_vel))
+            dist = np.sqrt(np.sum(np.square(los)))
+            v = np.sqrt(np.sum(np.square(agent.state.p_vel)))
             target_pos.append(dist)
-
-            agent_angle = 1-np.dot(los, agent.p_vel)/(v*dist)
-            a = [cos(target.state.p_angle),sin(target.state.p_angle)]
-            target_angle = 1-np.dot(-los, a)/(dist)
+            #print('los', los, 'agent', agent.state.p_vel, 'v', v, 'dist', dist)
+            try:
+                agent_angle = np.dot(los, agent.state.p_vel)/(v*dist)
+            except RuntimeWarning:
+                print('los', los, 'agent', agent.state.p_vel, 'v', v, 'dist', dist)
+            a = [np.cos(target.state.p_angle),np.sin(target.state.p_angle)]
+            target_angle = np.dot(-los, a)/(dist)
             target_pos.append(los)
             agent_angles.append(agent_angle)
             target_angles.append(target_angles)

@@ -8,6 +8,8 @@ class EntityState(object):
         # physical velocity
         self.p_vel = None
 
+        self.p_angle = None
+
 # state of agents (including communication and internal/mental state)
 class AgentState(EntityState):
     def __init__(self):
@@ -18,7 +20,7 @@ class AgentState(EntityState):
 class LandmarkState(EntityState):
     def __init__(self):
         super(LandmarkState, self).__init__()
-        self.p_angle = None
+        
 
 # action of the agent
 class Action(object):

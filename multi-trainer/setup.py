@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
 
-setup(name='maddpg',
+setup(name='dqn',
       version='0.0.1',
       description='Multi-Agent Deep Deterministic Policy Gradient',
-      url='https://github.com/openai/maddpg',
+      url='https://github.com/Tilidaimon/deeprl/tree/master/multi-trainer/network',
       author='Igor Mordatch',
       author_email='mordatch@openai.com',
       packages=find_packages(),

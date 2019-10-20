@@ -5,7 +5,7 @@ import time
 import pickle
 
 #import maddpg.common.tf_util as U
-from network.trainer.dqn import DQN
+from learn.trainer.dqn import DQN
 #import tensorflow.contrib.layers as layers
 
 def parse_args():
@@ -38,8 +38,8 @@ def parse_args():
 
 
 def make_env(scenario_name, arglist, benchmark=False):
-    from multiagent.environment import MultiAgentEnv
-    import multiagent.scenarios as scenarios
+    from multiagentenvs.environment import MultiAgentEnv
+    import multiagentenvs.scenarios as scenarios
 
     # load scenario from script
     scenario = scenarios.load(scenario_name + ".py").Scenario()
@@ -55,12 +55,30 @@ def make_env(scenario_name, arglist, benchmark=False):
 
 
 def train(arglist):
-    dqn = DQN()
+    print('Start training')
     env = make_env(arglist.scenario, arglist, arglist.benchmark)
+    obs_shape_n = [env.observation_space[i].shape for i in range(env.n)]
+    num_adversaries = min(env.n, arglist.num_adversaries)
+
+    input_dim = env.observation_dim
+    output_dim = env.action_space
+    print('build network')
+    dqn = DQN(input_dim=input_dim, output_dim=output_dim, hidden_dim=20, num_layers=3, batch_size=arglist.batch_size, biflag=True)
+
+    if arglist.load_dir == "":
+        arglist.load_dir = arglist.save_dir
+    if arglist.display or arglist.restore or arglist.benchmark:
+        print('Loading previous state...')
+        U.load_state(arglist.load_dir)
     episode_rewards = [0.0]  # sum of rewards for all agents
-    episode_step = 0
-    train_step = 0
+    agent_rewards = [[0.0] for _ in range(env.n)]  # individual agent reward
+    final_ep_rewards = []  # sum of rewards for training curve
+    final_ep_ag_rewards = []  # agent rewards for training curve
+    agent_info = [[[]]]  # placeholder for benchmarking info
+    saver = tf.train.Saver()
+    print('reset envs')
     obs = env.reset()
+    print('Start iteration...')
     while True:
         env.render()
  
@@ -82,6 +100,21 @@ def train(arglist):
             episode_rewards.append(0)
             #agent_info.append([[]])
 
+         # increment global step counter
+        train_step += 1
+
+        # for benchmarking learned policies
+        if arglist.benchmark:
+            for i, info in enumerate(info_n):
+                agent_info[-1][i].append(info_n['n'])
+            if train_step > arglist.benchmark_iters and (done or terminal):
+                file_name = arglist.benchmark_dir + arglist.exp_name + '.pkl'
+                print('Finished benchmarking, now saving...')
+                with open(file_name, 'wb') as fp:
+                    pickle.dump(agent_info[:-1], fp)
+                break
+            continue
+
         # for displaying learned policies
         if arglist.display:
             time.sleep(0.1)
@@ -91,6 +124,34 @@ def train(arglist):
         dqn.preupdate()
         dqn.learn()
         obs = obs_next
+
+        # save model, display training output
+        if terminal and (len(episode_rewards) % arglist.save_rate == 0):
+            U.save_state(arglist.save_dir, saver=saver)
+            # print statement depends on whether or not there are adversaries
+            if num_adversaries == 0:
+                print("steps: {}, episodes: {}, mean episode reward: {}, time: {}".format(
+                    train_step, len(episode_rewards), np.mean(episode_rewards[-arglist.save_rate:]), round(time.time()-t_start, 3)))
+            else:
+                print("steps: {}, episodes: {}, mean episode reward: {}, agent episode reward: {}, time: {}".format(
+                    train_step, len(episode_rewards), np.mean(episode_rewards[-arglist.save_rate:]),
+                    [np.mean(rew[-arglist.save_rate:]) for rew in agent_rewards], round(time.time()-t_start, 3)))
+            t_start = time.time()
+            # Keep track of final episode reward
+            final_ep_rewards.append(np.mean(episode_rewards[-arglist.save_rate:]))
+            for rew in agent_rewards:
+                final_ep_ag_rewards.append(np.mean(rew[-arglist.save_rate:]))
+
+        # saves final episode reward for plotting training curve later
+        if len(episode_rewards) > arglist.num_episodes:
+            rew_file_name = arglist.plots_dir + arglist.exp_name + '_rewards.pkl'
+            with open(rew_file_name, 'wb') as fp:
+                pickle.dump(final_ep_rewards, fp)
+            agrew_file_name = arglist.plots_dir + arglist.exp_name + '_agrewards.pkl'
+            with open(agrew_file_name, 'wb') as fp:
+                pickle.dump(final_ep_ag_rewards, fp)
+            print('...Finished total of {} episodes.'.format(len(episode_rewards)))
+            break
 
 if __name__ == '__main__':
     arglist = parse_args()

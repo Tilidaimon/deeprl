@@ -39,6 +39,7 @@ class MultiAgentEnv(gym.Env):
         # configure spaces
         self.action_space = []
         self.observation_space = []
+        self.observation_dim = len(observation_callback(self.agents[0], self.world))
         for agent in self.agents:
             self.action_space.append(len(world.landmarks))
             # observation space
@@ -180,7 +181,7 @@ class MultiAgentEnv(gym.Env):
         if self.render_geoms is None:
             # import rendering only if we need it (and don't import for headless machines)
             #from gym.envs.classic_control import rendering
-            from multiagent import rendering
+            from multiagentenvs import rendering
             self.render_geoms = []
             self.render_geoms_xform = []
             for entity in self.world.entities:
@@ -202,7 +203,7 @@ class MultiAgentEnv(gym.Env):
 
         results = []
         for i in range(len(self.viewers)):
-            from multiagent import rendering
+            from multiagentenvs import rendering
             # update bounds to center around agent
             cam_range = 1
             if self.shared_viewer:
